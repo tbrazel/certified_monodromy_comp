@@ -1,4 +1,4 @@
-include("certified_tracking.jl")
+include("../src/certified_tracking.jl")
 
 CCi = ComplexField()
 eR, (x,y,η) = CCi["x","y","η"]
