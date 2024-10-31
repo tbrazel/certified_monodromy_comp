@@ -3,10 +3,9 @@ include("../src/certified_tracking.jl")
 # polynomial rings
 CCi = AcbField()
 
-R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","t"])
+R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","η"])
 HR, t = polynomial_ring(R,"t")
 
-gen_set = AbstractAlgebra.variable_names("x#" => (1:5,1:2), "y#" => (1:5, 1:2))
 PR, (x11,x21,x31,x41,x51,x12,x22,x32,x42,x52,y11,y21,y31,y41,y51,y12,y22,y32,y42,y52) = polynomial_ring(HR,["x11","x21","x31","x41","x51","x12","x22","x32","x42","x52","y11","y21","y31","y41","y51","y12","y22","y32","y42","y52"])
 r = .1;
 
@@ -71,5 +70,5 @@ end
 # r : the initial radius for the interval box 
 # p_list: list of solutions at the base_point
 p1 = generate_perm(F, bp, a, b, r, p_list) 
-p2 = generate_perm(bp, a, b, r, p_list)
-p3 = generate_perm(bp, a, b, r, p_list)
+p2 = generate_perm(F, bp, a, b, r, p_list)
+p3 = generate_perm(F, bp, a, b, r, p_list)
