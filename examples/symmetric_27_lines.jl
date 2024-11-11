@@ -61,7 +61,7 @@ function generate_perm(F, bp, a, b, r, p_list)
         res, ind = track_loop(bp,a,b,p_list[i],r, p_list, i, F);
         perm = push!(perm, ind);
     end
-    string(perm)
+    perm
 end
 
 # loop 1
