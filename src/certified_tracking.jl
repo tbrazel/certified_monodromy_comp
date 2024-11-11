@@ -410,6 +410,8 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
 
 
         if predictor == "Hermite"
+            rt = round(t,digits=10);
+            print("\rt value: $rt/1")
             x, v, h, X, r, A = hermite_tracking(H, t, x, r, A, h, n, xprev, vprev, hprev, refinement_threshold);
 
             hprev = h;
@@ -448,17 +450,17 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
     stop!(pbar)
     end
     
-    Ft, x, r, A, v, h, radii = refine_step(H, t, x, r, A, h; threshold=refinement_threshold);
-
+    Ft, x, r, A, v, h, radii = refine_step(H, 1, x, r, A, h; threshold=refinement_threshold);
+#=
     # last refinement
     Ft = evaluate_matrix(transpose(hcat(H)), 1);    
     x = x-vec(Matrix(jacobian_inverse(Ft,x)*transpose(evaluate_matrix(Ft,x))));
     solution_norm = max_norm(evaluate_matrix(Ft,x));
-    while solution_norm > 1e-5
+    while solution_norm > 1e-10
         x = x-vec(Matrix(jacobian_inverse(Ft,x)*transpose(evaluate_matrix(Ft,x))));
         solution_norm = max_norm(evaluate_matrix(Ft,x));
     end    
-
+=#
     [x, iter]
 end
 
@@ -478,7 +480,7 @@ end
 
 # constructing a linear path from p0 to p1
 function linear_path(p0, p1, t)
-    n = length(a);
+    n = length(p0);
     HR = parent(t);
     p = zeros(HR,n)
     for i = 1:n
