@@ -76,6 +76,7 @@ function track_edge(F, e, from1to2)
 
         y, it = track(Fab, i, r);
         y_idx = 0;
+
         if length(qb) == 0
             qb = push!(qb, y);
             y_idx = 1;
@@ -87,7 +88,7 @@ function track_edge(F, e, from1to2)
             end
         end
         c12 = push!(c12, (x_idx, y_idx));
-        c21 = push!(c21, (y_idx, x_idx));
+#        c21 = push!(c21, (y_idx, x_idx));
     end
     va = vertex(a, qa);
     vb = vertex(b, qb);
@@ -121,7 +122,7 @@ function potential_edge(rc, edge, from1to2)
         return 0
     end
 
-    (rc-nqb)/(rc-ce)
+    (rc-ce-nqb)/(rc-ce)
 end
 
 function select_best_edge_and_direction(rc, edges)
@@ -132,7 +133,6 @@ function select_best_edge_and_direction(rc, edges)
     if m12 > m21
         println(p12);
         e = findall(i -> i == m12, p12);
-        println(e);
         return (edges[rand(e)], true)
     else
         println(p21);
@@ -155,7 +155,7 @@ function search_point(res, p_list)
             min_val = m;
         end
     end
-    if min_val > 1e-1
+    if min_val > 5*1e-3
         return false
     end
     Int64(k)
@@ -170,10 +170,11 @@ function track_complete_graph(F, r, vertices, max_root_count)
             edgs = push!(edgs,edge(vertices[i],vertices[j]));
         end
     end
-
+    println(edgs[end].node1.base_point)
     (e, from1to2) = select_best_edge_and_direction(rc, edgs);
 
     npoints = map(i -> length(i.partial_sols), vertices);
+    iter = 0;
 
     while all(i -> i == rc, npoints) == false
 
@@ -181,7 +182,16 @@ function track_complete_graph(F, r, vertices, max_root_count)
         println(from1to2);
 
         e = track_edge(F, e, from1to2);
+        prev_npoints = npoints;
         npoints = map(i -> length(i.partial_sols), vertices);
+        if prev_npoints == npoints
+            iter = iter+1;
+        else
+            iter = 0;
+        end
+        if iter > 10
+            break
+        end
         (e, from1to2) = select_best_edge_and_direction(rc, edgs);
 
     end
@@ -220,6 +230,16 @@ vb = vertex(b)
 vc = vertex(c)
 vd = vertex(d)
 
+
+e = edge(vbp,va)
+track_edge(F,e,true)
+e1 = edge(vbp,vc)
+track_edge(F,e1,true)
+e2 = edge(va,vc)
+track_edge(F,e2,true)
+track_edge(F,e1,false)
+
+vertices = [vbp,va, vc]
 vertices = [vbp,va , vb, vc, vd]
 edges = track_complete_graph(F, r, vertices,8)
 
