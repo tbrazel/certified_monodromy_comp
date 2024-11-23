@@ -197,7 +197,7 @@ function track_complete_graph(F, r, vertices, max_root_count)
 
     end
 
-    vertices
+    edgs
 end
 
 
@@ -214,7 +214,7 @@ HR, t = polynomial_ring(R,"t")
 PR, (p,q) = polynomial_ring(HR,["p","q"])
 r = .1;
 F= [X^4 + Y - 2*p X^4 + X^2 - 2*q*Y^2]
-x = [CCi(1.00001),CCi(1)]
+x = [CCi(1),CCi(1)]
 bp = [CCi(1),CCi(1)]
 
 x = [CCi(.90878855,.5578637), CCi(.994444959,0.17984841)]
@@ -274,3 +274,50 @@ vd = vertex(d)
 vertices = [vbp,va , vb, vc]
 vertices = [vbp,va , vb, vc, vd]
 edges = track_complete_graph(F, r, vertices,2)
+
+
+
+using HomotopyContinuation
+@var X Y Z p q c
+F = System([X^2+Y^2+Z^2-1, p^6*X^3 + q*Y^3 + Z + c, X*Y*Z-p*q*c*Y+1]; parameters=[p, q, c])
+res = monodromy_solve(F)
+
+# third example (root count = 18)
+CCi = AcbField()
+R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","η"])
+HR, t = polynomial_ring(R,"t")
+
+PR, (p,q,c) = polynomial_ring(HR,["p","q","c"])
+r = .1;
+F= [PR(1)*X^2+Y^2+Z^2-1 p^6*X^3 + q*Y^3 + Z + c X*Y*Z-p*q*c*Y+1]
+#x = [CCi(-0.6,-.8),CCi(-1.2,.4)]
+#bp = [CCi(1),CCi(2),CCi(3)]
+
+x = [CCi(0.6973711663401805, + 0.7107229335684621), CCi(-0.795405577902714,+ 0.2811964986033148), CCi( 0.7684222664434845, - 0.3539361488187257)]
+bp = [CCi( 0.06337858964481062, - 0.5623405888915303), CCi(-0.4630115285288688, 0.35590098330491626), CCi(-0.7643351719642744, + 0.7054109412911269)]
+
+a = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+b = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+c = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+d = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+f = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64))]
+#h = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+
+vbp = vertex(bp,[x])
+va = vertex(a)
+vb = vertex(b)
+vc = vertex(c)
+vd = vertex(d)
+ve = vertex(e)
+vf = vertex(f)
+vg = vertex(g)
+#vh = vertex(h)
+
+e1 = edge(vbp,va)
+
+vertices = [vbp,va , vb, vc, vd]
+vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
+edges = track_complete_graph(F, r, vertices,18)
+
