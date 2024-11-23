@@ -115,8 +115,8 @@ function potential_edge(rc, edge, from1to2)
     qa = va.partial_sols;
     qb = vb.partial_sols;
 
-    nqa = length(qa);
-    nqb = length(qb);
+    nqa = length(qa)-ce;
+    nqb = length(qb)-ce;
 
     if nqa-ce <= 0
         return 0
@@ -146,16 +146,17 @@ function search_point(res, p_list)
     n = length(p_list);
     k = 0;
     min_val = 0;
-    dummy = max_norm(matrix(res-p_list[1]));
+#    dummy = max_norm(matrix(res-p_list[1]));
+    dummy = maximum(map(i -> max_int_norm(i), res-p_list[1]));
     for i = 1:n 
-        m = max_norm(matrix(res-p_list[i]));
+        m = maximum(map(i -> max_int_norm(i), res-p_list[i]));#max_norm(matrix(res-p_list[i]));
         if m <= dummy
             dummy = m;
             k = i;
             min_val = m;
         end
     end
-    if min_val > 5*1e-3
+    if min_val > 1e-3
         return false
     end
     Int64(k)
@@ -189,7 +190,7 @@ function track_complete_graph(F, r, vertices, max_root_count)
         else
             iter = 0;
         end
-        if iter > 10
+        if iter > 220
             break
         end
         (e, from1to2) = select_best_edge_and_direction(rc, edgs);
@@ -213,34 +214,33 @@ HR, t = polynomial_ring(R,"t")
 PR, (p,q) = polynomial_ring(HR,["p","q"])
 r = .1;
 F= [X^4 + Y - 2*p X^4 + X^2 - 2*q*Y^2]
-#x = [CCi(1),CCi(1)]
-#bp = [CCi(1),CCi(1)]
+x = [CCi(1.00001),CCi(1)]
+bp = [CCi(1),CCi(1)]
 
 x = [CCi(.90878855,.5578637), CCi(.994444959,0.17984841)]
 bp = [CCi(.71706744781,.233144572792), CCi(.7081192922395,.07861538706)]
 
-a = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-b = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-c = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-d = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
+a = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+b = [CCi(-rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+c = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
+d = [CCi(rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
+f = [CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
+g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64))]
+#h = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
 
 vbp = vertex(bp,[x])
 va = vertex(a)
 vb = vertex(b)
 vc = vertex(c)
 vd = vertex(d)
+ve = vertex(e)
+vf = vertex(f)
+vg = vertex(g)
+#vh = vertex(h)
 
-
-e = edge(vbp,va)
-track_edge(F,e,true)
-e1 = edge(vbp,vc)
-track_edge(F,e1,true)
-e2 = edge(va,vc)
-track_edge(F,e2,true)
-track_edge(F,e1,false)
-
-vertices = [vbp,va, vc]
 vertices = [vbp,va , vb, vc, vd]
+vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
 edges = track_complete_graph(F, r, vertices,8)
 
 
@@ -259,6 +259,7 @@ F= [PR(1)*X^2+Y^2-1 p^6*X + q*Y + c]
 #bp = [CCi(1),CCi(2),CCi(3)]
 x = [CCi(0.12382176651911007356,-0.13956863333514041), CCi(1.0022243134174111, 0.017245447397329888)]
 bp = [CCi(0.9839298609366921, 0.990631857000690896), CCi(0.08327666534440658629989,0.14399678291441808), CCi(0.93416549993935638, 0.792486967800412)]
+
 a = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
 b = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
 c = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]

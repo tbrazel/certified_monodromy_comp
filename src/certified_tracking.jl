@@ -63,7 +63,7 @@ function max_int_norm(interval)
     r = real(interval);
     i = imag(interval);
     rmax = convert(Float64, abs(Nemo.midpoint(r)) + Nemo.radius(r));
-    imax = convert(Float64, abs(Nemo.midpoint(r)) + Nemo.radius(r));
+    imax = convert(Float64, abs(Nemo.midpoint(i)) + Nemo.radius(i));
     maximum([rmax, imax])
 end
 
