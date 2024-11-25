@@ -58,6 +58,7 @@ function track_edge(F, e, from1to2)
     end
     qa = va.partial_sols;
     qb = vb.partial_sols;
+    println("\rtracked_paths : $(ce+1)");
 
     untracked_idx = setdiff(1:length(qa), map(i -> i[1], c12));
 
@@ -74,7 +75,7 @@ function track_edge(F, e, from1to2)
             error("unknown candidate entered")
         end
 
-        y, it = track(Fab, i, r);
+        y, it = track(Fab, i, r; show_display=false);
         y_idx = 0;
 
         if length(qb) == 0
@@ -131,11 +132,9 @@ function select_best_edge_and_direction(rc, edges)
     m12 = maximum(p12);
     m21 = maximum(p21);
     if m12 > m21
-        println(p12);
         e = findall(i -> i == m12, p12);
         return (edges[rand(e)], true)
     else
-        println(p21);
         e = findall(i -> i == m21, p21);
         return (edges[rand(e)], false)
     end
@@ -146,17 +145,16 @@ function search_point(res, p_list)
     n = length(p_list);
     k = 0;
     min_val = 0;
-#    dummy = max_norm(matrix(res-p_list[1]));
     dummy = maximum(map(i -> max_int_norm(i), res-p_list[1]));
     for i = 1:n 
-        m = maximum(map(i -> max_int_norm(i), res-p_list[i]));#max_norm(matrix(res-p_list[i]));
+        m = maximum(map(i -> max_int_norm(i), res-p_list[i]));
         if m <= dummy
             dummy = m;
             k = i;
             min_val = m;
         end
     end
-    if min_val > 1e-3
+    if min_val > 1e-2
         return false
     end
     Int64(k)
@@ -164,6 +162,7 @@ end
 
 function track_complete_graph(F, r, vertices, max_root_count)
 
+    base_points = map(i -> i.base_point, vertices);
     rc = max_root_count;
     edgs = [];
     for i in 1:length(vertices)-1
@@ -171,29 +170,43 @@ function track_complete_graph(F, r, vertices, max_root_count)
             edgs = push!(edgs,edge(vertices[i],vertices[j]));
         end
     end
-    println(edgs[end].node1.base_point)
     (e, from1to2) = select_best_edge_and_direction(rc, edgs);
+    node1_idx = search_point(e.node1.base_point,base_points);
+    node2_idx = search_point(e.node2.base_point,base_points);
 
     npoints = map(i -> length(i.partial_sols), vertices);
     iter = 0;
+    num_found_solutions = npoints[1];
 
     while all(i -> i == rc, npoints) == false
 
-        println(npoints);
-        println(from1to2);
+        node1_sols = npoints[node1_idx];
+        node2_sols = npoints[node2_idx];
 
+#        println(npoints);
+        println("\r-----------------------------------------------------");
+        println("\rstart node: $node1_idx : $node1_sols known solutions");
+        println("\rtarg. node: $node2_idx : $node2_sols known solutions");
         e = track_edge(F, e, from1to2);
+
         prev_npoints = npoints;
+        num_found_solutions = npoints[1];
         npoints = map(i -> length(i.partial_sols), vertices);
+        if all(i -> i == rc, npoints)
+            println("all solutions found!");
+        end
         if prev_npoints == npoints
             iter = iter+1;
         else
             iter = 0;
         end
-        if iter > 220
+        if iter > 200
+            println("After 200 iterations, no known solution was found. Tracking is stopped.");
             break
         end
         (e, from1to2) = select_best_edge_and_direction(rc, edgs);
+        node1_idx = search_point(e.node1.base_point,base_points);
+        node2_idx = search_point(e.node2.base_point,base_points);
 
     end
 
@@ -214,11 +227,8 @@ HR, t = polynomial_ring(R,"t")
 PR, (p,q) = polynomial_ring(HR,["p","q"])
 r = .1;
 F= [X^4 + Y - 2*p X^4 + X^2 - 2*q*Y^2]
-x = [CCi(1),CCi(1)]
-bp = [CCi(1),CCi(1)]
-
-x = [CCi(.90878855,.5578637), CCi(.994444959,0.17984841)]
-bp = [CCi(.71706744781,.233144572792), CCi(.7081192922395,.07861538706)]
+x = [CCi(1),CCi(1)] # a solution
+bp = [CCi(1),CCi(1)] # base_point
 
 a = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
 b = [CCi(-rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
@@ -227,7 +237,6 @@ d = [CCi(rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
 e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
 f = [CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
 g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64))]
-#h = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
 
 vbp = vertex(bp,[x])
 va = vertex(a)
@@ -237,9 +246,7 @@ vd = vertex(d)
 ve = vertex(e)
 vf = vertex(f)
 vg = vertex(g)
-#vh = vertex(h)
 
-vertices = [vbp,va , vb, vc, vd]
 vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
 edges = track_complete_graph(F, r, vertices,8)
 
@@ -255,10 +262,8 @@ HR, t = polynomial_ring(R,"t")
 PR, (p,q,c) = polynomial_ring(HR,["p","q","c"])
 r = .1;
 F= [PR(1)*X^2+Y^2-1 p^6*X + q*Y + c]
-#x = [CCi(-0.6,-.8),CCi(-1.2,.4)]
-#bp = [CCi(1),CCi(2),CCi(3)]
-x = [CCi(0.12382176651911007356,-0.13956863333514041), CCi(1.0022243134174111, 0.017245447397329888)]
-bp = [CCi(0.9839298609366921, 0.990631857000690896), CCi(0.08327666534440658629989,0.14399678291441808), CCi(0.93416549993935638, 0.792486967800412)]
+x = [CCi(-0.6,-.8),CCi(-1.2,.4)]
+bp = [CCi(1),CCi(2),CCi(3)]
 
 a = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
 b = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
@@ -271,16 +276,11 @@ vb = vertex(b)
 vc = vertex(c)
 vd = vertex(d)
 
-vertices = [vbp,va , vb, vc]
 vertices = [vbp,va , vb, vc, vd]
 edges = track_complete_graph(F, r, vertices,2)
 
 
 
-using HomotopyContinuation
-@var X Y Z p q c
-F = System([X^2+Y^2+Z^2-1, p^6*X^3 + q*Y^3 + Z + c, X*Y*Z-p*q*c*Y+1]; parameters=[p, q, c])
-res = monodromy_solve(F)
 
 # third example (root count = 18)
 CCi = AcbField()
@@ -290,8 +290,6 @@ HR, t = polynomial_ring(R,"t")
 PR, (p,q,c) = polynomial_ring(HR,["p","q","c"])
 r = .1;
 F= [PR(1)*X^2+Y^2+Z^2-1 p^6*X^3 + q*Y^3 + Z + c X*Y*Z-p*q*c*Y+1]
-#x = [CCi(-0.6,-.8),CCi(-1.2,.4)]
-#bp = [CCi(1),CCi(2),CCi(3)]
 
 x = [CCi(0.6973711663401805, + 0.7107229335684621), CCi(-0.795405577902714,+ 0.2811964986033148), CCi( 0.7684222664434845, - 0.3539361488187257)]
 bp = [CCi( 0.06337858964481062, - 0.5623405888915303), CCi(-0.4630115285288688, 0.35590098330491626), CCi(-0.7643351719642744, + 0.7054109412911269)]
@@ -303,7 +301,6 @@ d = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(ran
 e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
 f = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
 g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64))]
-#h = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
 
 vbp = vertex(bp,[x])
 va = vertex(a)
@@ -313,11 +310,7 @@ vd = vertex(d)
 ve = vertex(e)
 vf = vertex(f)
 vg = vertex(g)
-#vh = vertex(h)
 
-e1 = edge(vbp,va)
-
-vertices = [vbp,va , vb, vc, vd]
 vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
 edges = track_complete_graph(F, r, vertices,18)
 

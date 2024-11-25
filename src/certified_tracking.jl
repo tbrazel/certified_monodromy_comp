@@ -411,7 +411,7 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
 
         if predictor == "Hermite"
             rt = round(t,digits=10);
-            print("\rt value: $rt/1")
+#            print("\rt value: $rt/1")
             x, v, h, X, r, A = hermite_tracking(H, t, x, r, A, h, n, xprev, vprev, hprev, refinement_threshold);
 
             hprev = h;
