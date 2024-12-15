@@ -55,6 +55,9 @@ function jacobian_inverse(system,vec)
     j = jac(system);
     eval_jac = evaluate_matrix(j, vec);
     Jinv, factor = pseudo_inv(eval_jac);
+    if radius(real(prod(Jinv))) > 1e+300 
+        return inv(eval_jac)
+    end
     1/factor * Jinv
 end
 
@@ -139,7 +142,7 @@ function refine_moore_box(f, x, r, A, rho)
     y = x;
     CR = parent(x[1]);
     n = size(A)[1];
-    while krawczyk_test(f, y, r, A, rho) == false 
+    while krawczyk_test(f, y, r, A, rho) == false
         d = A * transpose(evaluate_matrix(f, y));
         if max_norm(d) <= (1/64)*rho*r
             r = (1/2)*r;
@@ -264,8 +267,8 @@ function proceeding_step(h, CCi, n, tm, K)
     while max_norm(K) > 7/8
         h = 1/2 * h;
         radii = h/2;
-        if h < 10^(-10)
-            return 1
+        if h < 10^(-20)
+            error("h is too small");
         end
 
         T = CCi("$radii +/- $radii");
@@ -375,7 +378,7 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
     CCi = coefficient_ring(coeff_ring);
     t = 0;
     n = length(x);
-    h = 1/2;
+    h = 1/10;
     iter = 0;
     tprev = 0;
     renderiter = 0;
@@ -411,7 +414,6 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
 
         if predictor == "Hermite"
             rt = round(t,digits=10);
-#            print("\rt value: $rt/1")
             x, v, h, X, r, A = hermite_tracking(H, t, x, r, A, h, n, xprev, vprev, hprev, refinement_threshold);
 
             hprev = h;
@@ -429,6 +431,7 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
         iter = iter + 1;
 
         if show_display == true
+            print("\rt value: $rt/1")
             if (t-tprev)*100 > 1 
             
                 for i in 1: floor((t-tprev)*100)
@@ -450,7 +453,7 @@ function track(H, x, r; predictor="Hermite", show_display=true, refinement_thres
     stop!(pbar)
     end
     
-    Ft, x, r, A, v, h, radii = refine_step(H, 1, x, r, A, h; threshold=refinement_threshold);
+    Ft, x, r, A, v, h, radii = refine_step(H, 1, x, r, A, h; threshold=1/100);
 #=
     # last refinement
     Ft = evaluate_matrix(transpose(hcat(H)), 1);    
