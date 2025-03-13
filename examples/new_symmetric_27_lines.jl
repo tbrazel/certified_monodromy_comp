@@ -2,6 +2,7 @@ import Pkg; Pkg.add("Nemo")
 import Pkg; Pkg.add("AbstractAlgebra")
 import Pkg; Pkg.add("MultivariatePolynomials")
 import Pkg; Pkg.add("Oscar")
+import Pkg; Pkg.add("Term")
 
 include("../src/certified_tracking.jl")
 
