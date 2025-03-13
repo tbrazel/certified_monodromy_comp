@@ -109,7 +109,6 @@ open("./greenPurpleBlueLoop.txt", "w") do rl
     write(rl,"green+purple+blue loop is ", string(gpbLoop))
 end
 
-
 ##################### RED LOOP
 
 # red loop
