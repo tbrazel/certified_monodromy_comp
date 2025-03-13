@@ -73,6 +73,44 @@ function generate_perm(F, bp, a, b, r, p_list)
 end
 
 
+##################### GREEN LOOP
+green1 = [-500,0]
+green2 = [-500,CCi(-800,-500)]
+green3 = [-500,CCi(-800,500)]
+
+greenLoop = generate_perm(f, green1, green2, green3, r, p_list)
+
+print(typeof(greenLoop))
+
+open("./greenLoop.txt", "w") do rl
+    write(rl,"green loop is ", string(greenLoop))
+end
+
+##################### GREEN+PURPLE LOOP
+
+gp1 = [-500,0]
+gp2 = [-500,CCi(-1320,-500)]
+gp3 = [-500,CCi(-1320,500)]
+
+greenPurpleLoop = generate_perm(f, gp1, gp2, gp3, r, p_list)
+
+open("./greenPurpleLoop.txt", "w") do rl
+    write(rl,"green+purple loop is ", string(greenPurpleLoop))
+end
+
+##################### GREEN+PURPLE+BLUE LOOP
+gpb1 = [-500,0]
+gpb2 = [-500,CCi(-3000,-500)]
+gpb3 = [-500,CCi(-3000,500)]
+
+gpbLoop = generate_perm(f, gpb1, gpb2, gpb3, r, p_list)
+
+open("./greenPurpleBlueLoop.txt", "w") do rl
+    write(rl,"green+purple+blue loop is ", string(gpbLoop))
+end
+
+
+##################### RED LOOP
 
 # red loop
 red1 = [-500,0]
@@ -80,44 +118,9 @@ red2 = [-500,CCi(3200,-500)]
 red3 = [-500,CCi(3200,500)]
 
 # generating the permutation
-redLoop = generate_perm(f, red1, red2, red3, r, p_list) #1 8 24 11 6 5 19 2 25 22 4 17 16 15 14 13 12 26 7 27 21 10 23 3 9 18 20
-# caveat: it takes a long, long, long time (approx. 1~2 days?) 
-# don't worry. it is running. check the progress bar or the t value
-# or go directly with this result
-# p1 = [1, 8, 24, 11, 6, 5, 19, 2, 25, 22, 4, 17, 16, 15, 14, 13, 12, 26, 7, 27, 21, 10, 23, 3, 9, 18, 20]
-
-print("type of red loop is :\n")
-print(typeof(redLoop))
+redLoop = generate_perm(f, red1, red2, red3, r, p_list) 
 
 open("./redLoop.txt", "w") do rl
     write(rl,"red loop is ", string(redLoop))
 end
-
-# loop 2
-l2p1 = [0, 100]
-l2p2 = [-60, CCi(100,-50)]
-l2p3 = [-60, CCi(100,50)]  
-
-p2 = generate_perm(f, l2p1, l2p2, l2p3, r, p_list) #1 8 24 20 25 9 19 2 6 18 27 17 16 15 14 13 12 10 7 4 21 26 23 3 5 22 11
-# caveat: it takes a long, long, long time (approx. 1~2 days?) 
-# don't worry. it is running. check the progress bar or the t value
-# or go directly with this result
-p2 = [1, 8, 24, 20, 25, 9, 19, 2, 6, 18, 27, 17, 16, 15, 14, 13, 12, 10, 7, 4, 21, 26, 23, 3, 5, 22, 11]
-
-
-
-# GAP
-red_string = "redLoop:= PermList($redLoop)"
-# p2_str = "p2:= PermList($p2)"
-
-# install and load GAP
-import Pkg; Pkg.add("GAP")
-using GAP
-
-GAP.evalstr(red_string) #p1 is a product of 12 transpositions
-# GAP.evalstr(p2_str) #p2 is a product of 12 transpositions
-# @gap("p1*p2") #check that the product of p1 and p2 is a product of 6 transpositions
-
-# @gap("G := Group(p1,p2);") # define the group G using p1 and p2
-# @gap("StructureDescription(G);") # G is K4.
 
