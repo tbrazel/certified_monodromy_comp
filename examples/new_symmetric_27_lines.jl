@@ -72,6 +72,8 @@ function generate_perm(F, bp, a, b, r, p_list)
     perm
 end
 
+
+
 # red loop
 red1 = [-500,0]
 red2 = [-500,CCi(3200,-500)]
@@ -84,8 +86,8 @@ redLoop = generate_perm(f, red1, red2, red3, r, p_list) #1 8 24 11 6 5 19 2 25 2
 # or go directly with this result
 # p1 = [1, 8, 24, 11, 6, 5, 19, 2, 25, 22, 4, 17, 16, 15, 14, 13, 12, 26, 7, 27, 21, 10, 23, 3, 9, 18, 20]
 
-open('redLoop.txt', 'w') do rl
-    write(rl,"red loop is= ",redLoop)
+open("./redLoop.txt", "w") do rl
+    write(rl,"red loop is ", redLoop)
 end
 
 # loop 2
