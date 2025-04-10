@@ -272,7 +272,7 @@ function membership_test(
         (u in v_list) == false && (e in e_list)
 end
 
-function p_compose(H1::Vector{Pair{Int64,Int64}}, H2::Vector{Pair{Int, Int}})
+function p_compose(H1::Union{Vector{Tuple{Int64,Int64}},Vector{Pair{Int64,Int64}}}, H2::Vector{Pair{Int, Int}})
 
     l = length(H2);
     map(k -> k => sort(H1)[H2[k][2]][2], 1:l)
