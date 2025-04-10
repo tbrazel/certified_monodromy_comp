@@ -4,7 +4,7 @@ include("../../src/certified_monodromy_computation.jl")
 CCi = AcbField()
 
 # import solution data from the txt file
-include("27_lines_sol_list.txt");
+include("new_27_lines_sol_list.txt");
 
 # define polynomial rings
 R, (a₁, a₂, b₁, b₂, c₁, c₂, d₁, d₂,η) = CCi["a₁", "a₂", "b₁", "b₂", "c₁", "c₂", "d₁", "d₂","η"]

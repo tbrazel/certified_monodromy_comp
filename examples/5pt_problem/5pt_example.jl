@@ -1,4 +1,4 @@
-include("../../src/certified_monodromy_computation.jl")
+include("../src/certified_monodromy_computation.jl")
 
 CCi = AcbField()
 R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","η"])
@@ -21,7 +21,7 @@ perms=get_permutations(20,edges)
 str_convert(perms, "5pt_perm_list_20")
 
 using GAP
-@gap("Read(\"~/Documents/GitHub/certified_monodromy_comp/examples/5pt_problem/5pt_perm_list_20.txt\");")
+@gap("Read(\"~/Documents/GitHub/certified_monodromy_comp/src/5pt_perm_list_20.txt\");")
 @gap("G;")
 @gap("StructureDescription(G);") # (C2 x C2 x C2 x C2 x C2 x C2 x C2 x C2 x C2) : S10
 
