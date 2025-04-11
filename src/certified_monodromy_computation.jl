@@ -4,6 +4,7 @@ using LinearAlgebra
 using MultivariatePolynomials
 #using Term.Progress
 
+include("poly_setup.jl")
 include("interval_arithmetic.jl")
 include("track.jl")
 include("modules_for_tracking.jl")

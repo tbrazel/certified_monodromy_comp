@@ -1,9 +1,14 @@
-include("../src/certified_monodromy_computation.jl")
+include("../../src/certified_monodromy_computation.jl")
 
-CCi = AcbField()
-R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","η"])
-HR, t = polynomial_ring(R,"t")
-PR, (x11,x21,x31,x41,x51,x12,x22,x32,x42,x52,y11,y21,y31,y41,y51,y12,y22,y32,y42,y52) = polynomial_ring(HR,["x11","x21","x31","x41","x51","x12","x22","x32","x42","x52","y11","y21","y31","y41","y51","y12","y22","y32","y42","y52"])
+# polynomial rings
+@setupfield begin
+    AcbField()
+    (X,Y,Z)
+    (η,)
+    (t,)
+    (x11,x21,x31,x41,x51,x12,x22,x32,x42,x52,y11,y21,y31,y41,y51,y12,y22,y32,y42,y52)
+end
+CCi = _CCi
 
 include("eqs.jl")
 include("pts.jl")

@@ -1,7 +1,15 @@
-include("certified_monodromy_computation.jl")
+include("../../src/certified_monodromy_computation.jl")
+
+@setupfield begin
+    AcbField()
+    (l1, l2, l3)
+    (η,)
+    (t,)
+    (q11,q12,q13,q21,q22,q23,q31,q32,q33,s1,s2,s3,t1,t2,t3)
+end
 
 
-CCi = AcbField()
+CCi = _CCi
 
 R, (l1,l2,l3,η) = polynomial_ring(CCi,["l1","l2","l3","η"])
 HR, t = polynomial_ring(R,"t")
@@ -19,9 +27,9 @@ edges = track_complete_graph(hcat(F), r, vs,8)
 
 
 perms=get_permutations(8,edges)
-str_convert(perms, "P3P_perm_list_8","G")
+str_convert(perms, "Desktop/P3P_perm_list_8","G")
 
 using GAP
-@gap("Read(\"~/Documents/GitHub/certified_monodromy_comp/src/P3P_perm_list_8.txt\");")
+@gap("Read(\"~/Desktop/P3P_perm_list_8.txt\");")
 @gap("G;")
 @gap("StructureDescription(G);") # (((C2 x C2 x C2) : (C2 x C2)) : C3) : C2

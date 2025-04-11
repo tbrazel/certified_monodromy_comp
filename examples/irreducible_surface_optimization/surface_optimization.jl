@@ -1,10 +1,14 @@
-include("certified_monodromy_computation.jl")
+include("../../src/certified_monodromy_computation.jl")
 
-
-CCi = AcbField()
-R, (x,y,z,λ,η) = polynomial_ring(CCi,["x","y","z","λ","η"])
-HR, t = polynomial_ring(R,"t")
-PR, (u1,u2,u3) = polynomial_ring(HR,["u1","u2","u3"])
+# polynomial rings
+@setupfield begin
+    AcbField()
+    (x,y,z,λ)
+    (η,)
+    (t,)
+    (u1,u2,u3)
+end
+CCi = _CCi
 
 F = [2*(x-u1)-6*λ*(x^2+y^2)^2*x 2*(y-u2)-6*λ*(x^2+y^2)^2*y 2*(z-u3)+4*λ*z^3 0*u1+z^4-(x^2+y^2)^3]
 vars = [x y z λ]

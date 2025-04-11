@@ -1,4 +1,5 @@
-export max_int_norm, 
+export toCCi,
+    max_int_norm, 
     max_norm, 
     midpoint_complex_int, 
     midpoint_complex_box, 
@@ -7,6 +8,21 @@ export max_int_norm,
     convert_to_double_int, 
     convert_to_double_matrix
 
+
+
+function toCCi(x, F::AbstractAlgebra.Field)
+    if x isa Number
+        return F(x)
+    elseif x isa Complex
+        return F(real(x), imag(x))
+    elseif x isa AbstractVector
+        return [toCCi(e, F) for e in x]
+    elseif x isa AbstractMatrix
+        return [toCCi(e, F) for e in x] |> x -> reshape(x, size(x))
+    else
+        error("Cannot convert object of type $(typeof(x)) to field element")
+    end
+end
 
 #### max norm parts
 function max_int_norm(interval::AcbFieldElem)

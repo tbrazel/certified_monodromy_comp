@@ -1,17 +1,20 @@
 export speed_vector,
-    linear_predictor,
-    hermite_predictor
+       linear_predictor,
+       hermite_predictor
 
-# computing the speed vector for the linear predictor 
+
+# --------------------------------------------------------------------------
+# Compute the speed vector for the linear predictor
 function speed_vector(
-    H::Union{Matrix,Vector}, 
+    H::Union{Matrix, Vector}, 
     x::Vector{AcbFieldElem}, 
     tval::Number, 
-    A::AcbMatrix
+    A::AcbMatrix,
 )
-    ring = base_ring(H[1]);
-    n = size(H)[1];
+    ring = base_ring(H[1])
+    n    = length(H)
 
+    # Evaluate dH/dt symbolically at t
     result = evaluate_matrix(Matrix(transpose(hcat(H))),tval);
     for i = 1:n
         result[i]=Nemo.evaluate(derivative(H[i]),tval);
@@ -22,44 +25,52 @@ function speed_vector(
 end
 
 
+# --------------------------------------------------------------------------
+# Linear predictor step: x + η·v
 function linear_predictor(
-    H::Union{Matrix,Vector}, 
+    H::Union{Matrix, Vector}, 
     v::Vector{AcbFieldElem}, 
-    x::Vector{AcbFieldElem}
+    x::Vector{AcbFieldElem},
 )
+    eR    = base_ring(H[1])
+    η     = gens(eR)[end]
+    delta = [vi * η for vi in v]
 
-    eR = base_ring(H[1]);
-    genseR = gens(eR);
-    η =  genseR[end];
-
-    n = size(v)[1];
-    result = zeros(eR,n);
-    for i = 1:n
-        result[i] = v[i]*η;
-    end
-    x+ result
+    return x + delta
 end
 
 
-# Hermite predictor when previous data are recorded.
+# --------------------------------------------------------------------------
+# Hermite predictor (uses previous step data)
 function hermite_predictor(
-    H::Union{Matrix,Vector}, 
+    H::Union{Matrix, Vector}, 
     x::Vector, 
     xprev::Vector, 
     v::Vector, 
     vprev::Vector, 
-    hprev::Number
+    hprev::Number,
 )
+    eR = base_ring(H[1])
+    η  = gens(eR)[end]
+    n  = length(v)
 
-    eR = base_ring(H[1]);
-    genseR = gens(eR);
-    η =  genseR[end];
+    result = Vector{typeof(η)}(undef, n)
 
-    n = size(v)[1];
-    result = [];
-    for i = 1:n
-        result = push!(result, v[i]*η+ (3*v[i]/hprev-(v[i]-vprev[i])/hprev-3*(x[i]-xprev[i])/hprev^2)*(η^2)+
-        (2*v[i]/hprev^2-(v[i]-vprev[i])/hprev^2-2*(x[i]-xprev[i])/hprev^3)*(η^3));
+    for i in 1:n
+        dη   = v[i] * η
+        η²   = η^2
+        η³   = η^3
+
+        dx   = x[i] - xprev[i]
+        dv   = v[i] - vprev[i]
+        h²   = hprev^2
+        h³   = hprev^3
+
+        t2 = (3 * v[i] / hprev - dv / hprev - 3 * dx / h²) * η²
+        t3 = (2 * v[i] / h²   - dv / h²   - 2 * dx / h³) * η³
+
+        result[i] = dη + t2 + t3
     end
-    x+ result 
+
+    return x + result
 end
