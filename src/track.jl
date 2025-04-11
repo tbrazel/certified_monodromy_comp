@@ -25,7 +25,7 @@ function track(
     G = evaluate_matrix(Matrix(transpose(hcat(H))), 0)
     A = jacobian_inverse(G, x)
 
-    ## --- First Step (Hermite predictor) ----------------------------------
+    ## --- First Step (Linear predictor) ----------------------------------
     x, v, h, X, r, A = linear_tracking(H, t, x, r, A, h, n, refinement_threshold)
 
     xprev  = x
