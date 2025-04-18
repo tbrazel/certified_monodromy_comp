@@ -1,316 +1,335 @@
-include("certified_tracking.jl")
+export Vertex, vertex,
+    Edge, edge,
+    track_edge,
+    search_point,
+    track_complete_graph,
+    complete_correspondences,
+    neighbor,
+    membership_test,
+    p_compose,
+    get_permutations,
+    str_convert
 
 
 struct Vertex
-    base_point::Vector{AcbFieldElem}
-    partial_sols::Vector{Vector{AcbFieldElem}}
+    base_point::Union{Vector{AcbFieldElem},Matrix{AcbFieldElem}}
+    partial_sols::Vector{Union{Vector{AcbFieldElem},Matrix{AcbFieldElem}}}
+    Edges::Vector{Any}
 end
-function Base.show(io::IO,x::Vertex)
-    print(io,"Vertex")
+
+function Base.show(io::IO, x::Vertex)
+    print(io, "Vertex")
 end
+
 struct Edge
     node1::Vertex
     node2::Vertex
     correspondence12::Vector{Tuple{Int64,Int64}}
     correspondence21::Vector{Tuple{Int64,Int64}}
 end
-function Base.show(io::IO,x::Edge)
-    print(io,"Edge")
+
+function Base.show(io::IO, x::Edge)
+    print(io, "Edge")
 end
 
-function vertex(p)
-    partial_sols = Vector{AcbFieldElem}[];
-    
-    Vertex(p, partial_sols)
-end
-function vertex(p,x)
-    partial_sols = x;
-    
-    Vertex(p, partial_sols)
+function vertex(p::Vector)
+    Vertex(p, Matrix{AcbFieldElem}[], Vector{Edge}[])
 end
 
-function edge(p,q)
-    correspondence12 = Tuple{Int64,Int64}[];
-    correspondence21 = Tuple{Int64,Int64}[];
-    
-    Edge(p, q, correspondence12, correspondence21)
-end
-function edge(p,q,c12,c21)
-    correspondence12 = c12;
-    correspondence21 = c21;
-    
-    Edge(p, q, correspondence12, correspondence21)
+function vertex(p::Vector, x::Vector)
+    Vertex(p, x, Vector{Edge}[])
 end
 
-function track_edge(F, e, from1to2)
-    if from1to2 == true
-        va = e.node1;
-        vb = e.node2;
-        c12 = e.correspondence12;
-        c21 = e.correspondence21;
-        ce = length(c12);
+function edge(p::Vertex, q::Vertex)
+    Edge(p, q, Tuple{Int64,Int64}[], Tuple{Int64,Int64}[])
+end
+
+function edge(
+    p::Vertex,
+    q::Vertex,
+    c12::Vector{Tuple{Int64,Int64}},
+    c21::Vector{Tuple{Int64,Int64}}
+)
+    Edge(p, q, c12, c21)
+end
+
+function track_edge(
+    H::Union{Matrix, Vector}, 
+    e::Edge, 
+    from1to2::Bool, 
+    r::Number
+)
+    if from1to2
+        va, vb = e.node1, e.node2
+        c12, c21 = e.correspondence12, e.correspondence21
     else
-        va = e.node2;
-        vb = e.node1;
-        c12 = e.correspondence21;
-        c21 = e.correspondence12;    
-        ce = length(c12);
+        va, vb = e.node2, e.node1
+        c12, c21 = e.correspondence21, e.correspondence12
     end
-    qa = va.partial_sols;
-    qb = vb.partial_sols;
-    println("\rtracked_paths : $(ce+1)");
 
-    untracked_idx = setdiff(1:length(qa), map(i -> i[1], c12));
+    qa, qb = va.partial_sols, vb.partial_sols
+    a, b = va.base_point, vb.base_point
 
-    start_sols = qa[untracked_idx];
+    untracked_idx = setdiff(1:length(qa), map(t -> t[1], c12))
+    println("→ tracking edge with $(length(untracked_idx)) paths")
 
-    a = va.base_point;
-    b = vb.base_point;
+    Fab = specified_system(a, b, H)
+    n_iter = 1
 
-    Fab = specified_system(a,b,F);
+    for i in qa[untracked_idx]
+        x_idx = search_point(i, qa)
+        x_idx === false && error("unknown candidate entered")
 
-    for i in start_sols
-        x_idx = search_point(i, qa);
-        if x_idx == false
-            error("unknown candidate entered")
+        println("\n🔁 tracking path #$(n_iter)")
+        y = track(Fab, i, r; show_display = true, refinement_threshold = 1/8)
+        n_iter += 1
+
+        y_idx = search_point(y, qb)
+        if y_idx === false
+            push!(qb, y)
+            y_idx = length(qb)
         end
 
-        y, it = track(Fab, i, r; show_display=false);
-        y_idx = 0;
-
-        if length(qb) == 0
-            qb = push!(qb, y);
-            y_idx = 1;
-        else
-            y_idx = search_point(y, qb);
-            if y_idx == false
-                qb = push!(qb, y);
-                y_idx = length(qb);
-            end
-        end
-        c12 = push!(c12, (x_idx, y_idx));
-#        c21 = push!(c21, (y_idx, x_idx));
+        push!(c12, (x_idx, y_idx))
+        push!(c21, (y_idx, x_idx))
     end
-    va = vertex(a, qa);
-    vb = vertex(b, qb);
-    
-    if from1to2 == true
-        return edge(va,vb,c12,c21)
-    else
-        return edge(vb,va,c21,c12)
-    end    
+
+    va = vertex(a, qa)
+    vb = vertex(b, qb)
+
+    return from1to2 ? edge(va, vb, sort(c12), sort(c21)) :
+                      edge(vb, va, sort(c21), sort(c12))
 end
 
-function potential_edge(rc, edge, from1to2)
-    c12 = edge.correspondence12;
-    c21 = edge.correspondence21;
-    if from1to2 == true
-        va = edge.node1;
-        vb = edge.node2;
-        ce = length(c12);
-    else
-        va = edge.node2;
-        vb = edge.node1;
-        ce = length(c21);
-    end
-    qa = va.partial_sols;
-    qb = vb.partial_sols;
+function search_point(res::Vector{AcbFieldElem}, p_list::Vector)
+    n = length(p_list)
+    best_idx, best_val = 0, Inf
 
-    nqa = length(qa)-ce;
-    nqb = length(qb)-ce;
-
-    if nqa-ce <= 0
-        return 0
-    end
-
-    (rc-ce-nqb)/(rc-ce)
-end
-
-function select_best_edge_and_direction(rc, edges)
-    p12 = map(i -> potential_edge(rc, i, true), edges);
-    p21 = map(i -> potential_edge(rc, i, false), edges);
-    m12 = maximum(p12);
-    m21 = maximum(p21);
-    if m12 > m21
-        e = findall(i -> i == m12, p12);
-        return (edges[rand(e)], true)
-    else
-        e = findall(i -> i == m21, p21);
-        return (edges[rand(e)], false)
-    end
-end
-
-
-function search_point(res, p_list)
-    n = length(p_list);
-    k = 0;
-    min_val = 0;
-    dummy = maximum(map(i -> max_int_norm(i), res-p_list[1]));
-    for i = 1:n 
-        m = maximum(map(i -> max_int_norm(i), res-p_list[i]));
-        if m <= dummy
-            dummy = m;
-            k = i;
-            min_val = m;
+    for i in 1:n 
+        dist = maximum(map(abs ∘ max_int_norm, res - p_list[i]))
+        if dist < best_val
+            best_val = dist
+            best_idx = i
         end
     end
-    if min_val > 1e-2
-        return false
-    end
-    Int64(k)
+
+    return best_val > 5e-3 ? false : Int64(best_idx)
 end
 
-function track_complete_graph(F, r, vertices, max_root_count)
+function track_complete_graph(
+    H::Union{Matrix,Vector},
+    r::Number,
+    vertices::Vector{Vertex},
+    max_root_count::Int
+)
 
-    base_points = map(i -> i.base_point, vertices);
-    rc = max_root_count;
-    edgs = [];
+    base_points = map(i -> i.base_point, vertices)
+    rc = max_root_count
+    edgs = Edge[]
     for i in 1:length(vertices)-1
         for j in i+1:length(vertices)
-            edgs = push!(edgs,edge(vertices[i],vertices[j]));
+            e = edge(vertices[i], vertices[j])
+            edgs = push!(edgs, e)
+
+            node1_edges = vertices[i].Edges
+            node2_edges = vertices[j].Edges
+            node1_edges = unique(push!(node1_edges, e))
+            node2_edges = unique(push!(node2_edges, e))
+
         end
     end
-    (e, from1to2) = select_best_edge_and_direction(rc, edgs);
-    node1_idx = search_point(e.node1.base_point,base_points);
-    node2_idx = search_point(e.node2.base_point,base_points);
+    npoints = map(i -> length(i.partial_sols), vertices)
+    n_correspondences = map(i -> length(i.correspondence12), edgs)
+    prev_n_correspondences = n_correspondences
 
-    npoints = map(i -> length(i.partial_sols), vertices);
-    iter = 0;
-    num_found_solutions = npoints[1];
 
-    while all(i -> i == rc, npoints) == false
+    iter = 0
+    while all(i -> i == max_root_count, n_correspondences) == false
+        for i in edgs
 
-        node1_sols = npoints[node1_idx];
-        node2_sols = npoints[node2_idx];
+            if sum(prev_n_correspondences) == sum(n_correspondences)
+                iter = iter + 1
+            else
+                iter = 0
+            end
+            if iter > 10
+                println("After 10 iterations, no known solution was found. Tracking is stopped.")
+                return edgs
+            end
+            prev_n_correspondences = n_correspondences
 
-#        println(npoints);
-        println("\r-----------------------------------------------------");
-        println("\rstart node: $node1_idx : $node1_sols known solutions");
-        println("\rtarg. node: $node2_idx : $node2_sols known solutions");
-        e = track_edge(F, e, from1to2);
 
-        prev_npoints = npoints;
-        num_found_solutions = npoints[1];
-        npoints = map(i -> length(i.partial_sols), vertices);
-        if all(i -> i == rc, npoints)
-            println("all solutions found!");
+            node1_idx = search_point(i.node1.base_point, base_points)
+            node2_idx = search_point(i.node2.base_point, base_points)
+            node1_sols = npoints[node1_idx]
+            node2_sols = npoints[node2_idx]
+
+            println("\r-----------------------------------------------------")
+            println("\rstart node: $node1_idx : $node1_sols known solutions")
+            println("\rtarg. node: $node2_idx : $node2_sols known solutions")
+            i = track_edge(H, i, true, r)
+
+            println("\r-----------------------------------------------------")
+            println("\rstart node: $node2_idx : $node2_sols known solutions")
+            println("\rtarg. node: $node1_idx : $node1_sols known solutions")
+            i = track_edge(H, i, false, r)
+
+            npoints = map(j -> length(j.partial_sols), vertices)
+            n_correspondences = map(k -> length(k.correspondence12), edgs)
+
+            println("\r# Correspondences per edge: $n_correspondences")
         end
-        if prev_npoints == npoints
-            iter = iter+1;
-        else
-            iter = 0;
-        end
-        if iter > 200
-            println("After 200 iterations, no known solution was found. Tracking is stopped.");
-            break
-        end
-        (e, from1to2) = select_best_edge_and_direction(rc, edgs);
-        node1_idx = search_point(e.node1.base_point,base_points);
-        node2_idx = search_point(e.node2.base_point,base_points);
-
     end
 
     edgs
 end
 
 
+function parameter_points(
+    v1::Vertex,
+    sz_p::Int,
+    n_vertices::Int
+)
+    vertices = Vertex[v1]
+    for i in 1:n_vertices-1
+        v = AcbFieldElem[]
+        for j in 1:sz_p
+            r_unit_circle = exp(rand(Int8) * im)
+            push!(v, CCi(real(r_unit_circle), imag(r_unit_circle)))
+        end
+        vertices = push!(vertices, vertex(v))
+    end
+    vertices
+end
 
+function complete_correspondences(
+    rc::Int,
+    E::Vector{Edge}
+)
+    reverse(deleteat!(E, findall(e ->
+            length(unique(map(j -> j[2], e.correspondence12))) != rc || length(map(j -> j[2], e.correspondence21)) != rc, E)))
+end
 
+function neighbor(v::Vertex, e::Edge)
+    if v == e.node1
+        return e.node2
+    elseif v == e.node2
+        return e.node1
+    else
+        error("Edge is not incident at the given vertex.")
+    end
+end
 
+function membership_test(
+    v::Vertex,
+    e::Edge,
+    v_list::Vector{Vertex},
+    e_list::Vector{Edge}
+)
+    u = neighbor(v, e)
+    (u in v_list) == false && (e in e_list)
+end
 
-# first example (root count = 8)
-CCi = AcbField()
+function p_compose(H1::Union{Vector{Tuple{Int64,Int64}},Vector{Pair{Int64,Int64}}}, H2::Vector{Pair{Int,Int}})
 
-R, (X,Y,η) = polynomial_ring(CCi,["X","Y","η"])
-HR, t = polynomial_ring(R,"t")
+    l = length(H2)
+    map(k -> k => sort(H1)[H2[k][2]][2], 1:l)
+end
 
-PR, (p,q) = polynomial_ring(HR,["p","q"])
-r = .1;
-F= [X^4 + Y - 2*p X^4 + X^2 - 2*q*Y^2]
-x = [CCi(1),CCi(1)] # a solution
-bp = [CCi(1),CCi(1)] # base_point
+function get_permutations(
+    rc::Number,
+    E::Vector{Edge}
+)
 
-a = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
-b = [CCi(-rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-c = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
-d = [CCi(rand(Float64),rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-f = [CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64))]
+    id_perm = map(i -> i => i, 1:rc)
+    EG = complete_correspondences(rc, E)
+    VG = unique(vcat(map(i -> i.node1, EG), map(i -> i.node2, EG)))
 
-vbp = vertex(bp,[x])
-va = vertex(a)
-vb = vertex(b)
-vc = vertex(c)
-vd = vertex(d)
-ve = vertex(e)
-vf = vertex(f)
-vg = vertex(g)
+    uncovered_v = deleteat!(VG, findall(i -> i == VG[1], VG))
+    uncovered_e = EG
 
-vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
-edges = track_complete_graph(F, r, vertices,8)
+    T = []
 
+    while length(uncovered_v) > 0
+        v_list = [filter(v -> any(e -> membership_test(v, e, uncovered_v, uncovered_e), v.Edges), uncovered_v)[1]]
+        if length(v_list) == 1
+            v = v_list[1]
 
+            e_list = [reverse(filter(e -> membership_test(v, e, uncovered_v, uncovered_e), v.Edges))[1]]
+            if length(e_list) == 1
+                e = e_list[1]
+                T = push!(T, [v, e])
+                uncovered_e = deleteat!(uncovered_e, findall(i -> i == e, uncovered_e))
+            end
+        end
+        uncovered_v = deleteat!(uncovered_v, findall(i -> i == v, uncovered_v))
+    end
 
+    perms = Vector{Int64}[]
+    for e in uncovered_e
+        u = e.node1
+        v = e.node2
+        u_path = id_perm
+        ind = findall(i -> u in i, T)
+        while length(ind) > 0
+            eu = T[ind[1]][2]
+            if u == eu.node1
+                u_path = p_compose(eu.correspondence12, u_path)
+            else
+                u_path = p_compose(sort(eu.correspondence21), u_path)
+            end
+            u = neighbor(u, eu)
+            ind = findall(i -> u in i, T)
+        end
+        v_path = id_perm
+        ind = findall(i -> v in i, T)
+        while length(ind) > 0
+            ev = T[ind[1]][2]
+            if v == ev.node1
+                v_path = p_compose(ev.correspondence12, v_path)
+            else
+                v_path = p_compose(sort(ev.correspondence21), v_path)
+            end
+            v = neighbor(v, ev)
+            ind = findall(i -> v in i, T)
+        end
+        perms = push!(perms, map(i -> i[2], p_compose(v_path, p_compose(e.correspondence12, sort(map(i -> reverse(i), u_path))))))
+    end
 
+    perms
+end
 
-# second example (root count = 2)
-CCi = AcbField()
-R, (X,Y,η) = polynomial_ring(CCi,["X","Y","η"])
-HR, t = polynomial_ring(R,"t")
+function safe_path(file_name::String)
+    if startswith(file_name, "~")
+        return expanduser(file_name)
+    elseif isabspath(file_name)
+        return file_name
+    else
+        return joinpath(pwd(), file_name)
+    end
+end
 
-PR, (p,q,c) = polynomial_ring(HR,["p","q","c"])
-r = .1;
-F= [PR(1)*X^2+Y^2-1 p^6*X + q*Y + c]
-x = [CCi(-0.6,-.8),CCi(-1.2,.4)]
-bp = [CCi(1),CCi(2),CCi(3)]
+function str_convert(
+    l::Vector{Vector{Int64}},
+    file_name::String,
+    group_name::String
+)
+    path = safe_path("$file_name.txt")
+    open(path, "w") do file ## change the directory properly
+        iter = 0
+        for i in l
+            write(file, "p$iter:= PermList($i);\n")
+            iter = iter + 1
+        end
 
-a = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-b = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-c = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-d = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),rand(Float64))]
-
-vbp = vertex(bp,[x])
-va = vertex(a)
-vb = vertex(b)
-vc = vertex(c)
-vd = vertex(d)
-
-vertices = [vbp,va , vb, vc, vd]
-edges = track_complete_graph(F, r, vertices,2)
-
-
-
-
-# third example (root count = 18)
-CCi = AcbField()
-R, (X,Y,Z,η) = polynomial_ring(CCi,["X","Y","Z","η"])
-HR, t = polynomial_ring(R,"t")
-
-PR, (p,q,c) = polynomial_ring(HR,["p","q","c"])
-r = .1;
-F= [PR(1)*X^2+Y^2+Z^2-1 p^6*X^3 + q*Y^3 + Z + c X*Y*Z-p*q*c*Y+1]
-
-x = [CCi(0.6973711663401805, + 0.7107229335684621), CCi(-0.795405577902714,+ 0.2811964986033148), CCi( 0.7684222664434845, - 0.3539361488187257)]
-bp = [CCi( 0.06337858964481062, - 0.5623405888915303), CCi(-0.4630115285288688, 0.35590098330491626), CCi(-0.7643351719642744, + 0.7054109412911269)]
-
-a = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
-b = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-c = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
-d = [CCi(rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-e = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),rand(Float64))]
-f = [CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64)),-CCi(rand(Float64),rand(Float64))]
-g = [CCi(-rand(Float64),rand(Float64)),CCi(rand(Float64),-rand(Float64)),CCi(rand(Float64),-rand(Float64))]
-
-vbp = vertex(bp,[x])
-va = vertex(a)
-vb = vertex(b)
-vc = vertex(c)
-vd = vertex(d)
-ve = vertex(e)
-vf = vertex(f)
-vg = vertex(g)
-
-vertices = [vbp,va , vb, vc, vd,ve,vf,vg]
-edges = track_complete_graph(F, r, vertices,18)
-
+        write(file, "$group_name:=Group(")
+        for i in 0:length(l)-1
+            if i < length(l) - 1
+                write(file, "p$i,")
+            else
+                write(file, "p$i")
+            end
+        end
+        write(file, ");")
+    end
+end
