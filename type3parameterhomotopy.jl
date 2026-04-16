@@ -1,0 +1,109 @@
+using Pkg
+Pkg.activate(@__DIR__)
+
+using CertifiedHomotopyTracking
+using HomotopyContinuation
+
+# Variables for the lines
+@var a_1, a_2, b_1, b_2, c_1, c_2, d_1, d_2
+
+sqthree = sqrt(3);
+
+# Starting point will be when beta=1 let's say
+
+f = System([
+a_1^3+a_1*b_1^2+(3*sqthree-3)*a_1*b_1*c_1+c_1^3+d_1^3,
+3*a_1^2*a_2+a_2*b_1^2+2*a_1*b_1*b_2+(3*sqthree-3)*a_2*b_1*c_1+(3*sqthree-3
+)*a_1*b_2*c_1+(3*sqthree-3)*a_1*b_1*c_2+3*c_1^2*c_2+3*d_1^2*d_2,
+3*a_1*a_2^2+2*a_2*b_1*b_2+a_1*b_2^2+(3*sqthree-3)*a_2*b_2*c_1+(3*sqthree-3
+)*a_2*b_1*c_2+(3*sqthree-3)*a_1*b_2*c_2+3*c_1*c_2^2+3*d_1*d_2^2,
+a_2^3+a_2*b_2^2+(3*sqthree-3)*a_2*b_2*c_2+c_2^3+d_2^3,
+.911589*a_1+.88565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
+.896976*a_1+.138818*a_2+.707287*b_1-.0657292*b_2+.26806*c_1+.866177*c_2+.18616*d_1+.896809*d_2+.417192,
+.473248*a_1+.643963*a_2+.12494*b_1+.520899*b_2+.576117*c_1+.486441*c_2+.384317*d_1+.552473*d_2+.18095,
+.779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817
+])
+
+sols = HomotopyContinuation.solve(f)
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Setup System
+# ------------------------------------------------------------------------------
+@variables a_1 a_2 b_1 b_2 c_1 c_2 d_1 d_2
+@variables beta
+const PREC_BITS = 256 
+const CC = AcbField(PREC_BITS) # Complex Field (acb)
+
+# convert solutions to CC format
+p_list = map(i-> map(j -> CC(j), i), solutions(sols))
+
+v1 = vertex([CC(0)], [p_list[1]])
+
+
+
+# System Definition
+f = [a_1^3+a_1*b_1^2+(3*sqthree-3)*a_1*b_1*c_1+c_1^3+beta*d_1^3,
+    3*a_1^2*a_2+a_2*b_1^2+2*a_1*b_1*b_2+(3*sqthree-3)*a_2*b_1*c_1+(3*sqthree-3)*a_1*b_2*c_1+(3*sqthree-3)*a_1*b_1*c_2+3*c_1^2*c_2+3*beta*d_1^2*d_2,
+    3*a_1*a_2^2+2*a_2*b_1*b_2+a_1*b_2^2+(3*sqthree-3)*a_2*b_2*c_1+(3*sqthree-3)*a_2*b_1*c_2+(3*sqthree-3)*a_1*b_2*c_2+3*c_1*c_2^2+3*beta*d_1*d_2^2,
+    a_2^3+a_2*b_2^2+(3*sqthree-3)*a_2*b_2*c_2+c_2^3+beta*d_2^3,
+    .911589*a_1+.88565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
+    .896976*a_1+.138818*a_2+.707287*b_1-.0657292*b_2+.26806*c_1+.866177*c_2+.18616*d_1+.896809*d_2+.417192,
+    .473248*a_1+.643963*a_2+.12494*b_1+.520899*b_2+.576117*c_1+.486441*c_2+.384317*d_1+.552473*d_2+.18095,
+    .779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817
+    ];
+x_vars = [a_1, a_2, b_1, b_2, c_1, c_2, d_1, d_2]
+p_vars = [beta]
+
+# ------------------------------------------------------------------------------
+# 2. Local Helper Functions
+# ------------------------------------------------------------------------------
+function track_loop(bp, a, b, x0, p_list, i, F)
+    println("Root Number $i: Tracking the first edge")
+    F1 = make_edge_system(F, bp, a)
+    x1, _ = track_path(F1, x0; t_end=1.0, h_init=0.1)
+    if x1 === nothing return nothing, nothing end 
+
+    println("Root Number $i: Tracking the second edge")
+    F2 = make_edge_system(F, a, b)
+    x2, _ = track_path(F2, x1; t_end=1.0, h_init=0.1)
+    if x2 === nothing return nothing, nothing end 
+
+    println("Root Number $i: Tracking the third edge")
+    F3 = make_edge_system(F, b, bp)
+    x3, _ = track_path(F3, x2; t_end=1.0, h_init=0.1)
+    if x3 === nothing return nothing, nothing end 
+
+    ind = search_point(x3, p_list)
+    println("Result: Mapped to $ind")
+    return x3, ind
+end
+
+function generate_perm(F, bp, a, b, p_list)
+    n = length(p_list)
+    perm = []
+    res_list = []
+    for i = 1:n
+        res, ind = track_loop(bp, a, b, p_list[i], p_list, i, F)
+        
+        if res === nothing 
+            println("Stopped by user. Returning partial permutation.")
+            break 
+        end
+        
+        push!(perm, ind)
+        push!(res_list, res)
+    end
+    return res_list, perm
+end
+
+starting_point = [CC(1)];
+trianglevertex1 = [CC(-1,1)];
+trianglevertex2 = [CC(-1,-1)];
+
+compiled_homotopy = compile_edge_homotopy(f, x_vars, p_vars)
+
+
+p2 = generate_perm(compiled_homotopy, starting_point, trianglevertex1, trianglevertex2, p_list)
+string(p2[2])
