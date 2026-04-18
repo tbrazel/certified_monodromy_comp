@@ -3,25 +3,37 @@
 using Pkg
 Pkg.activate(@__DIR__)
 
+using GAP
 using CertifiedHomotopyTracking
-
-
 # compute solutions using HC.jl first
 using HomotopyContinuation
 
+
+# Logging
+using Dates
+current_time = now()
+date_time_string = Dates.format(current_time, "yyyy_mm_dd:HH:MM")
+log_file_name = "eeg_logs/type6dolgachev_" * date_time_string * ".txt"
+
 @var a_1, a_2, b_1, b_2, c_1, c_2, d_1, d_2
 
-a=0
-
-f = System([a_1^3+b_1^3+c_1^3+d_1^3, 3*a_1^2*a_2+3*b_1^2*b_2+3*c_1^2*c_2+3*d_1^2*d_2, 3*a_1*a_2^2+3*b_1*b_2^2+3*c_1*c_2^2+3*d_1*d_2^2, a_2^3+b_2^3+c_2^3+d_2^3,
-      .911589*a_1-.48565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
-      .896976*a_1+.138818*a_2+.707287*b_1-.0657292*b_2+.26806*c_1+.866177*c_2+.18616*d_1+.896809*d_2+.417192,
-      .473248*a_1+.643963*a_2+.12494*b_1+.520899*b_2+.576117*c_1+.486441*c_2+.384317*d_1+.552473*d_2+.18095,
-      .779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817])
+f = System([
+    a_1^3+b_1^3+c_1^3+d_1^3,
+    3*a_1^2*a_2+3*b_1^2*b_2+3*c_1^2*c_2+3*d_1^2*d_2,
+    3*a_1*a_2^2+3*b_1*b_2^2+3*c_1*c_2^2+3*d_1*d_2^2,
+    a_2^3+b_2^3+c_2^3+d_2^3,
+    .911589*a_1-.48565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
+    .896976*a_1+.138818*a_2+.707287*b_1-.0657292*b_2+.26806*c_1+.866177*c_2+.18616*d_1+.896809*d_2+.417192,
+    .473248*a_1+.643963*a_2+.12494*b_1+.520899*b_2+.576117*c_1+.486441*c_2+.384317*d_1+.552473*d_2+.18095,
+    .779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817
+])
 
 sols = HomotopyContinuation.solve(f)
 
-
+io = open(log_file_name,"a")
+write(io,"Starting system: " * string(f)*"\n")
+write(io,"With solutions computed as: " * string(sols)*"\n\n")
+close(io);
 
 
 # ------------------------------------------------------------------------------
@@ -40,15 +52,25 @@ v1 = vertex([CC(0)], [p_list[1]])
 
 
 # System Definition
-f = [a_1^3+b_1^3+c_1^3+alpha*a_1*c_1*d_1+alpha*b_1*c_1*d_1+d_1^3, 3*a_1^2*a_2+3*b_1^2*b_2+3*c_1^2*c_2+alpha*a_2*c_1*d_1+alpha*b_2*c_1*d_1+alpha*a_1*c_2*d_1+alpha*b_1*c_2*d_1+alpha*a_1*c_1*d_2+alpha*b_1*c_1*d_2+3*d_1^2*d_2, 3*a_1*a_2^2+3*b_1*b_2^2+3*c_1*c_2^2+alpha*a_2*c_2*d_1+alpha*b_2*c_2*d_1+alpha*a_2*c_1*d_2+alpha*b_2*c_1*d_2+alpha*a_1*c_2*d_2+alpha*b_1*c_2*d_2+3*d_1*d_2^2,
-     a_2^3+b_2^3+c_2^3+alpha*a_2*c_2*d_2+alpha*b_2*c_2*d_2+d_2^3,
-    .911589*a_1+.88565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
+
+f  = [
+    a_1^3+b_1^3+c_1^3+alpha*a_1*c_1*d_1+alpha*b_1*c_1*d_1+d_1^3,
+    3*a_1^2*a_2+3*b_1^2*b_2+3*c_1^2*c_2+alpha*a_2*c_1*d_1+alpha*b_2*c_1*d_1+alpha*a_1*c_2*d_1+alpha*b_1*c_2*d_1+alpha*a_1*c_1*d_2+alpha*b_1*c_1*d_2+3*d_1^2*d_2,
+    3*a_1*a_2^2+3*b_1*b_2^2+3*c_1*c_2^2+alpha*a_2*c_2*d_1+alpha*b_2*c_2*d_1+alpha*a_2*c_1*d_2+alpha*b_2*c_1*d_2+alpha*a_1*c_2*d_2+alpha*b_1*c_2*d_2+3*d_1*d_2^2,
+    a_2^3+b_2^3+c_2^3+alpha*a_2*c_2*d_2+alpha*b_2*c_2*d_2+d_2^3,
+    .911589*a_1-.48565*a_2+2.523357*b_1-.646118*b_2+.30993*c_1+.36067*c_2+.0452546*d_1+.429238*d_2+.0146597,
     .896976*a_1+.138818*a_2+.707287*b_1-.0657292*b_2+.26806*c_1+.866177*c_2+.18616*d_1+.896809*d_2+.417192,
     .473248*a_1+.643963*a_2+.12494*b_1+.520899*b_2+.576117*c_1+.486441*c_2+.384317*d_1+.552473*d_2+.18095,
-    .779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817
+    .779979*a_1+.443068*a_2+.901413*b_1+2.349995*b_2+.283387*c_1+.646477*c_2+.549256*d_1+.135106*d_2+.569817    
     ];
 x_vars = [a_1, a_2, b_1, b_2, c_1, c_2, d_1, d_2]
 p_vars = [alpha]
+
+
+io = open(log_file_name,"a")
+write(io,"x_vars: " * string(x_vars)*"\n")
+write(io,"p_vars: " * string(p_vars)*"\n\n")
+close(io);
 
 # ------------------------------------------------------------------------------
 # 2. Local Helper Functions
@@ -98,8 +120,8 @@ end
 
 
 starting_point = [CC(0)]
-leftloop1 = [CC(-10,10)]
-leftloop2 = [CC(-10,-10)]
+leftloop1 = [CC(-100,200)]
+leftloop2 = [CC(-100,-200)]
 
 compiled_homotopy = compile_edge_homotopy(f, x_vars, p_vars)
 
@@ -108,21 +130,33 @@ p1 = generate_perm(compiled_homotopy,starting_point,leftloop1,leftloop2, p_list)
 println("\nLoop 1: ")
 string(p1[2])
 
+io = open(log_file_name,"a")
+write(io,"Path 1: " * string(p1[2])*"\n")
+close(io);
 
-urloop1 = [CC(0,10)]
-urloop2 = [CC(10,0)]
+
+urloop1 = [CC(0,100)]
+urloop2 = [CC(100,0)]
 
 p2 = generate_perm(compiled_homotopy,starting_point,urloop1,urloop2, p_list)
 println("\nLoop 2: ")
 string(p2[2])
 
+io = open(log_file_name,"a")
+write(io,"Path 2: " * string(p2[2])*"\n")
+close(io);
 
-drloop1 = [CC(0,-10)]
-drloop2 = [CC(10,0)]
+
+drloop1 = [CC(0,-100)]
+drloop2 = [CC(100,0)]
 
 p3 = generate_perm(compiled_homotopy,starting_point,drloop1,drloop2, p_list)
 println("\nLoop 3: ")
 string(p3[2])
+
+io = open(log_file_name,"a")
+write(io,"Path 3: " * string(p3[2])*"\n\n")
+close(io);
 
 # ------------------------------------------------------------------------------
 # 4. GAP Analysis
@@ -133,17 +167,18 @@ p1_gap = GAP.Globals.PermList(GAP.Obj(p1[2]))
 p2_gap = GAP.Globals.PermList(GAP.Obj(p2[2]))
 p3_gap = GAP.Globals.PermList(GAP.Obj(p3[2]))
 
-
 G = GAP.Globals.Group(p1_gap, p2_gap,p3_gap)
 println("Group G defined.")
-
 println("Structure Description:")
 println(GAP.Globals.StructureDescription(G)) # SL(2,3) : C4
-
 println("Galois Width:")
 gw = galois_width(G) # 2
 
-
+io = open(log_file_name,"a")
+write(io,"Group G is: " * string(G)*"\n")
+write(io,"Description: " * string(GAP.Globals.StructureDescription(G))*"\n")
+write(io,"Galois width: "* string(galois_width(G))*"\n")
+close(io);
 
 
 
