@@ -29,3 +29,5 @@ x_vars: Num[a_1, a_2, b_1, b_2, c_1, c_2, d_1, d_2]
 p_vars: Num[alpha]
 
 Path 1: Any[26, 19, 11, 24, 18, 13, 25, 3, 10, 20, 8, 6, 12, 4, 22, 15, 5, 17, 27, 9, 7, 16, 1, 14, 21, 23, 2]
+
+Tommy: truncated this on 4/20/26, was down to e-13. At least we got one loop though!
